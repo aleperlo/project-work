@@ -3,7 +3,8 @@ import numpy as np
 from collections import defaultdict
 
 class Solution:
-    def __init__(self, G=None, paths_dict=None, gold_dict=None, solution=None):
+    def __init__(self, P, G=None, paths_dict=None, gold_dict=None, solution=None):
+        self.P = P
         if G is not None:
             self.paths_dict = nx.shortest_path(G, source=0, weight='dist')
             self.gold_dict = {n: data['gold'] for n, data in G.nodes(data=True)}
@@ -59,7 +60,25 @@ class Solution:
         solution_copy[idx] = c.item()
         if verbose:
             print(f"Mutated index {idx} from {self.solution[idx]} to {c.item()}")
-        return Solution(paths_dict=self.paths_dict, gold_dict=self.gold_dict, solution=solution_copy)
+        return Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, solution=solution_copy)
+    
+    def fitness(self):
+        total_cost = 0.0
+        for dest, path in self.paths_dict.items():
+            if dest == 0:
+                continue
+            current_gold = 0.0
+            
+            for i in range(len(path) - 1):
+                u = path[i]
+                v = path[i+1]
+                if u != 0 and u in self.gold_dict:
+                    current_gold += self.gold_dict[u]
+                dist = self.P.graph[u][v]['dist'] 
+                total_cost += dist + (self.P.alpha * dist * current_gold) ** self.P.beta
+
+        return total_cost
+        
     
     def __str__(self):
         return str(self.solution)

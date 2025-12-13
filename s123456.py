@@ -57,6 +57,7 @@ class Problem:
         return dist + (self._alpha * dist * weight) ** self._beta
 
     def baseline(self):
+        solution = []
         cost = 0
         for dest, path in nx.single_source_dijkstra_path(
             self._graph, source=0, weight='dist'
@@ -70,9 +71,11 @@ class Problem:
             logging.debug(
                 f"dummy_solution: return to 0 ({' > '.join(str(n) for n in reversed(path))}) -- cost: {self.cost(path, self._graph.nodes[dest]['gold']):.2f}"
             )
+            solution.append((dest, self._graph.nodes[dest]['gold']))
+            solution.append((0, 0))
             cost += self.cost(path, 0) + self.cost(path, self._graph.nodes[dest]['gold'])
         logging.info(f"dummy_solution: total cost: {cost:.2f}")
-        return cost
+        return solution, cost
 
     def plot(self):
         plt.figure(figsize=(10, 10))
