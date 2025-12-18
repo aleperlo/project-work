@@ -6,9 +6,11 @@ class Solution:
     def __init__(self, P, G=None, paths_dict=None, gold_dict=None, solution=None):
         self.P = P
         if G is not None:
+            self.G = G
             self.paths_dict = nx.shortest_path(G, source=0, weight='dist')
             self.gold_dict = {n: data['gold'] for n, data in G.nodes(data=True)}
         elif paths_dict is not None and gold_dict is not None:
+            self.G = P.graph  # fallback to P.graph when G not provided
             self.paths_dict = paths_dict
             self.gold_dict = gold_dict
         else:
@@ -58,27 +60,26 @@ class Solution:
         choices.remove(self.solution[idx])
         c = np.random.choice(choices)
         solution_copy[idx] = c.item()
-        if verbose:
-            print(f"Mutated index {idx} from {self.solution[idx]} to {c.item()}")
         return Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, solution=solution_copy)
     
     def fitness(self):
         total_cost = 0.0
         for dest, path in self.paths_dict.items():
-            if dest == 0:
+            if dest == 0 or dest not in self.solution:
                 continue
+            for i in range(1, len(path)):
+                total_cost += self.G[path[i-1]][path[i]]['dist']
+                #print(f"distanze from {path[i-1]} to {path[i]}: {self.G[path[i-1]][path[i]]['dist']}")
+            nodes_to_grab = [i for i in path[1:] if self.solution[i-1] == dest]
             current_gold = 0.0
-            
-            for i in range(len(path) - 1):
-                u = path[i]
-                v = path[i+1]
-                if u != 0 and u in self.gold_dict:
-                    current_gold += self.gold_dict[u]
-                dist = self.P.graph[u][v]['dist'] 
+            for i in range(len(path)-1, 0, -1):
+                if path[i] in nodes_to_grab:
+                    current_gold += self.gold_dict[path[i]]
+                dist = self.G[path[i-1]][path[i]]['dist']
+                #print(f"Going from {path[i]} to {path[i-1]} with distance {dist} and current gold {current_gold}")
                 total_cost += dist + (self.P.alpha * dist * current_gold) ** self.P.beta
-
+               
         return total_cost
-        
-    
+
     def __str__(self):
         return str(self.solution)
