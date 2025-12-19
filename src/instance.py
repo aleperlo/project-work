@@ -1,14 +1,16 @@
 import networkx as nx
 import numpy as np
 from collections import defaultdict
+import random
 
 class Solution:
     def __init__(self, P, G=None, paths_dict=None, gold_dict=None, solution=None):
         self.P = P
         if G is not None:
-            self.G = G
-            self.paths_dict = nx.shortest_path(G, source=0, weight='dist')
-            self.gold_dict = {n: data['gold'] for n, data in G.nodes(data=True)}
+            self.G = G.copy()
+            self.paths_dict = nx.shortest_path(self.G, source=0, weight='dist')
+            self.gold_dict = {n: data['gold'] for n, data in self.G.nodes(data=True)}
+            
         elif paths_dict is not None and gold_dict is not None:
             self.G = P.graph  # fallback to P.graph when G not provided
             self.paths_dict = paths_dict
