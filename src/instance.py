@@ -91,6 +91,22 @@ class Solution:
             i = np.random.choice(candidates)
             solution_copy[solution_copy == val] = i+1
         return Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, solution=solution_copy)
+    
+    def crossover(self, p2):
+        offspring = np.zeros(len(self.solution), dtype=int)
+        v1 = set(np.unique(self.solution, return_counts=False))
+        v2 = set(np.unique(p2.solution, return_counts=False))
+        while np.any(offspring == 0): 
+            if len(v1) != 0:          
+                val = np.random.choice(list(v1))
+                v1.remove(val)            
+                offspring[(self.solution == val) & (offspring==0)] = val
+            if len(v2) != 0:   
+                val = np.random.choice(list(v2))
+                v2.remove(val)
+                offspring[(p2.solution == val) & (offspring==0)] = val
+ 
+        return Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, solution=offspring)
 
     
     def fitness(self):
