@@ -53,6 +53,7 @@ class Solution:
                     formatted_solution.append((node, gold))
         return formatted_solution
     
+    """
     def mutate(self, verbose=False):
         solution_copy = self.solution.copy()
         idx = np.random.choice(list(self.admissible_mutations.keys())) - 1
@@ -61,6 +62,36 @@ class Solution:
         c = np.random.choice(choices)
         solution_copy[idx] = c.item()
         return Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, solution=solution_copy)
+    """
+    def mutate_split(self):
+        solution_copy = np.array(self.solution.copy())
+        values, cnt = np.unique(solution_copy, return_counts=True)
+        val = np.random.choice(values, p= cnt/cnt.sum())
+        idx = np.where(values == val)[0][0]
+        if cnt[idx] > 1:
+            i = cnt[idx]//2
+            to_change = []
+            for node in self.paths_dict[val]:
+                if solution_copy[node-1] == val:
+                    to_change.append(node-1)
+                if len(to_change) >= i:
+                    break
+            solution_copy[to_change] = i
+        return Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, solution=solution_copy)
+
+    def mutate_join(self):
+        solution_copy = np.array(self.solution.copy())
+        values, cnt = np.unique(solution_copy, return_counts=True)
+        prob = 1/cnt / (1/cnt).sum()
+        val = np.random.choice(values, p= prob)
+        idx = np.where(values == val)[0][0]
+        # from solution_copy, choose an index i whose value in the array != val but such that path_dict[i] contains val
+        candidates = [i for i in range(len(solution_copy)) if solution_copy[i] != val and val in self.paths_dict[solution_copy[i]]]
+        if len(candidates) > 0:
+            i = np.random.choice(candidates)
+            solution_copy[solution_copy == val] = i+1
+        return Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, solution=solution_copy)
+
     
     def fitness(self):
         total_cost = 0.0
