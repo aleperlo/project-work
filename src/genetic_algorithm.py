@@ -12,9 +12,9 @@ class GeneticAlgorithm:
         self.population_size = population_size
         self.max_generations = max_generations
         self.paths_dict = nx.shortest_path(problem.graph, source=0, weight='dist')
-        self.G = problem.graph 
+        self.G = problem.graph.copy()
         self.paths_dict.pop(0)
-        if all([len(p) == 2 for p in self.paths_dict.values()]):
+        if nx.density(self.G) > 0.7: # if the graph is almost complete, disconnect
                 self.disconnected_graph(ratio=disconnection_ratio)
         self.population : list[Solution] = [Solution(P=problem, G=self.G) for _ in range(population_size)]
         self.best_cost : float = np.inf
@@ -25,13 +25,16 @@ class GeneticAlgorithm:
         self.evaluations = []
 
     def disconnected_graph(self, ratio):    
-          # Remove the starting node from paths_dict
+        # Remove the starting node from paths_dict
         dists = [self.G[0][i]["dist"] for i in self.paths_dict.keys()]
         dists = dists / sum(dists)
         to_remove = random.choices(list(self.paths_dict.keys()), weights=dists, k=int(ratio*len(self.paths_dict)))
-        print(f"Removing edges from 0 to nodes: {to_remove}")
+        #print(f"Removing edges from 0 to nodes: {to_remove}")
         self.G.remove_edges_from([(0, node) for node in to_remove])
-    
+        while nx.density(self.G) > 0.3:
+            u, v = random.choice(list(self.G.edges()))
+            if u != 0 and v != 0:
+                self.G.remove_edge(u, v)
 
     def tournament_selection(self, costs, tao = 3):
         indeces = random.sample(range(self.population_size), tao)
@@ -71,8 +74,6 @@ class GeneticAlgorithm:
                 else:
                     p2 = self.tournament_selection(costs)
                     offspring = p1.crossover(p2)
-                
-                
 
                 gen_evaluations.append(offspring.fitness())
 
@@ -94,4 +95,5 @@ class GeneticAlgorithm:
         for gen, evals in self.evaluations:
             plt.scatter([gen]*len(evals), evals, color='red', alpha=0.1, s=1)
         plt.show()
+
 
