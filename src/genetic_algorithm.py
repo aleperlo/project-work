@@ -5,6 +5,8 @@ import copy
 from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 import networkx as nx
+import json
+import pandas as pd
 
 class GeneticAlgorithm:
     def __init__(self, problem, population_size=100, max_generations = 500, disconnection_ratio=0.7, mutation_rate = 0.3, mutation_choice = 0.5):
@@ -96,4 +98,25 @@ class GeneticAlgorithm:
             plt.scatter([gen]*len(evals), evals, color='red', alpha=0.1, s=1)
         plt.show()
 
-
+    
+    def log(self, log_dir):
+        params = {
+            "population_size": self.population_size,
+            "max_generations": self.max_generations,
+            "mutation_rate": self.mutation_rate,
+            "mutation_choice": self.mutation_choice,
+            "problem_size": self.G.number_of_nodes(),
+            "problem_alpha": self.problem.alpha,
+            "problem_beta": self.problem.beta,
+            "problem_density": nx.density(self.problem.graph),
+        }
+        with open(f"{log_dir}/ga_params.json", "w") as f:
+            json.dump(params, f, indent=4)
+        df_history = pd.DataFrame(self.history, columns=["generation", "best_cost"])
+        df_history.to_csv(f"{log_dir}/ga_history.csv", index=False)
+        evaluation_list = []
+        for gen, evals in self.evaluations:
+            for eval in evals:
+                evaluation_list.append((gen, eval))
+        df_evaluations = pd.DataFrame(evaluation_list, columns=["generation", "evaluation_cost"])
+        df_evaluations.to_csv(f"{log_dir}/ga_evaluations.csv", index=False)
