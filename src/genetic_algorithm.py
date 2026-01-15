@@ -23,6 +23,7 @@ class GeneticAlgorithm:
         self.best_sol : Solution = None
         self.mutation_rate = mutation_rate
         self.mutation_choice = mutation_choice
+        self.elitism = self.population_size // 10
         self.history = []
         self.evaluations = []
 
@@ -51,7 +52,7 @@ class GeneticAlgorithm:
         
         for i in tqdm(range(self.max_generations)):
             costs = [ind.fitness() for ind in self.population]
-            min_costs = np.argsort(costs)[:10]
+            min_costs = np.argsort(costs)[:self.elitism]
             min_cost = costs[min_costs[0]]
             self.history.append((i, min_cost))
             gen_evaluations = []
@@ -99,7 +100,7 @@ class GeneticAlgorithm:
         plt.show()
 
     
-    def log(self, log_dir):
+    def log(self, log_dir, baseline_cost = None):
         params = {
             "population_size": self.population_size,
             "max_generations": self.max_generations,
@@ -109,6 +110,7 @@ class GeneticAlgorithm:
             "problem_alpha": self.problem.alpha,
             "problem_beta": self.problem.beta,
             "problem_density": nx.density(self.problem.graph),
+            "baseline_cost": baseline_cost
         }
         with open(f"{log_dir}/ga_params.json", "w") as f:
             json.dump(params, f, indent=4)
