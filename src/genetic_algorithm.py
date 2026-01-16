@@ -18,7 +18,8 @@ class GeneticAlgorithm:
         self.paths_dict.pop(0)
         if nx.density(self.G) > 0.7: # if the graph is almost complete, disconnect
                 self.disconnected_graph(ratio=disconnection_ratio)
-        self.population : list[Solution] = [Solution(P=problem, G=self.G) for _ in range(population_size)]
+        naive_solution = Solution(P=problem, G=self.G, solution=[dest for dest in range(1, problem.graph.number_of_nodes())])
+        self.population : list[Solution] = [Solution(P=problem, G=self.G) for _ in range(population_size)] + [naive_solution]
         self.best_cost : float = np.inf
         self.best_sol : Solution = None
         self.mutation_rate = mutation_rate

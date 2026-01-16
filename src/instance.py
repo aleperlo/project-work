@@ -23,12 +23,10 @@ class Solution:
             for node in path:
                 self.admissible_values[node].append(dest)
         self.admissible_values.pop(0)
-        # Initialize solution
-        self.solution = self.random_solution() if solution is None else solution
-        # Format solution
-        self.formatted_solution = self.format_solution()
         # Compute admissible mutations
         self.admissible_mutations = {k: v for k, v in self.admissible_values.items() if len(v) > 1}
+        # Initialize solution
+        self.solution = self.mutation_random_solution() if solution is None else solution
 
     def random_solution(self):
         solution = []
@@ -37,15 +35,22 @@ class Solution:
             solution.append(c.item())
         return solution
     
+    def mutation_random_solution(self):
+        solution = np.arange(1, len(self.paths_dict))
+        solution_obj = Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, solution=solution)
+        for _ in range(2):
+            solution_obj = solution_obj.mutate_join()
+        return solution_obj.solution
+
     def format_solution(self):
         formatted_solution = []
         for dest, path in self.paths_dict.items():
             if dest == 0:
                 continue
             if dest in self.solution:
-                # print("dest:", dest, "path:", path, end=' ')
+                print("dest:", dest, "path:", path, end=' ')
                 nodes_to_grab = [i for i in path[1:] if self.solution[i-1] == dest]
-                # print("nodes to grab:", nodes_to_grab)
+                print("nodes to grab:", nodes_to_grab)
                 for node in path[1:-1]:
                     # print("  node:", node, "grab:", 0.0)
                     formatted_solution.append((node, 0.0))
@@ -73,12 +78,13 @@ class Solution:
         if cnt[idx] > 1:
             i = cnt[idx]//2
             to_change = []
-            for node in self.paths_dict[val]:
+            for node in self.paths_dict[val][1:]:
                 if solution_copy[node-1] == val:
                     to_change.append(node-1)
                 if len(to_change) >= i:
+                    dest = node
                     break
-            solution_copy[to_change] = i
+            solution_copy[to_change] = dest
         return Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, solution=solution_copy)
 
     def mutate_join(self):
@@ -88,10 +94,10 @@ class Solution:
         val = np.random.choice(values, p= prob)
         idx = np.where(values == val)[0][0]
         # from solution_copy, choose an index i whose value in the array != val but such that path_dict[i] contains val
-        candidates = [i for i in range(len(solution_copy)) if solution_copy[i] != val and val in self.paths_dict[solution_copy[i]]]
+        candidates = [u for i, u in enumerate(solution_copy) if u != val and val in self.paths_dict[u]]
         if len(candidates) > 0:
-            i = np.random.choice(candidates)
-            solution_copy[solution_copy == val] = i+1
+            u = np.random.choice(candidates)
+            solution_copy[solution_copy == val] = u
         return Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, solution=solution_copy)
     
     def crossover(self, p2):
