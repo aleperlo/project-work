@@ -7,18 +7,83 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import json
 import pandas as pd
+import heapq
+
+def prim_dijkstra_nx(G, root, beta=0.3, weight='dist'):
+    """
+    Computes a Shallow-Light Tree (PD-Tree) from a NetworkX graph.
+    
+    Parameters:
+    - G: NetworkX Graph (can be complete or sparse).
+    - root: The node identifier for the root (e.g., 0).
+    - beta: 0.0 (MST) to 1.0 (SPT/Dijkstra).
+    - weight: The edge attribute name holding the distance/cost.
+    
+    Returns:
+    - T: A new NetworkX Graph representing the simplified tree.
+    """
+    # The result tree
+    T = nx.Graph()
+    T.add_node(root, **G.nodes[root]) # Copy root attributes if any
+    
+    # Track visited nodes to avoid cycles
+    visited = set()
+    
+    # Track the actual distance from root to node u in the tree T
+    # dist_in_tree[root] = 0
+    dist_in_tree = {root: 0.0}
+    
+    # Priority Queue: stores tuples of (heuristic_cost, u, v, edge_weight)
+    # We start by adding all valid edges from the root to the PQ
+    # heuristic = weight(u,v) + beta * dist_in_tree[u]
+    pq = []
+    
+    visited.add(root)
+    
+    # Initialize PQ with root's neighbors
+    for neighbor, attr in G[root].items():
+        w = attr.get(weight, 1.0)
+        # For the root, dist_in_tree[root] is 0, so heuristic is just w
+        heapq.heappush(pq, (w, root, neighbor, w))
+
+    # Main Loop
+    while pq:
+        # Get the edge with the lowest "PD-cost"
+        prio, u, v, w = heapq.heappop(pq)
+        
+        if v in visited:
+            continue
+            
+        # Add v to the tree
+        visited.add(v)
+        T.add_node(v, **G.nodes[v]) # Copy node attributes
+        T.add_edge(u, v, dist=w)
+        
+        # Calculate exact distance to v in the new tree
+        dist_v = dist_in_tree[u] + w
+        dist_in_tree[v] = dist_v
+        
+        # Scan neighbors of v to add to PQ
+        for neighbor, attr in G[v].items():
+            if neighbor not in visited:
+                w_new = attr.get(weight, 1.0)
+                
+                # THE CORE EQUATION:
+                # Cost = Edge_Weight + (Beta * Distance_From_Root_To_Parent)
+                heuristic = w_new + (beta * dist_v)
+                
+                heapq.heappush(pq, (heuristic, v, neighbor, w_new))
+                
+    return T
 
 class GeneticAlgorithm:
-    def __init__(self, problem, population_size=100, max_generations = 500, disconnection_ratio=0.7, mutation_rate = 0.3, mutation_choice = 0.5):
+    def __init__(self, problem, population_size=100, max_generations = 500, pd_param=0.5, mutation_rate = 0.3, mutation_choice = 0.5):
         self.problem = problem
         self.population_size = population_size
         self.max_generations = max_generations
-        self.paths_dict = nx.shortest_path(problem.graph, source=0, weight='dist')
         self.G = problem.graph.copy()
-        self.paths_dict.pop(0)
-        if nx.density(self.G) > 0.7: # if the graph is almost complete, disconnect
-                self.disconnected_graph(ratio=disconnection_ratio)
-        naive_solution = Solution(P=problem, G=self.G, solution=[dest for dest in range(1, problem.graph.number_of_nodes())])
+        self.G = prim_dijkstra_nx(self.G, 0, beta=pd_param)
+        naive_solution = Solution(P=problem, G=self.G, solution=[dest for dest in range(1, self.G.number_of_nodes())])
         self.population : list[Solution] = [Solution(P=problem, G=self.G) for _ in range(population_size)] + [naive_solution]
         self.best_cost : float = np.inf
         self.best_sol : Solution = None
@@ -27,18 +92,6 @@ class GeneticAlgorithm:
         self.elitism = self.population_size // 10
         self.history = []
         self.evaluations = []
-
-    def disconnected_graph(self, ratio):    
-        # Remove the starting node from paths_dict
-        dists = [self.G[0][i]["dist"] for i in self.paths_dict.keys()]
-        dists = dists / sum(dists)
-        to_remove = random.choices(list(self.paths_dict.keys()), weights=dists, k=int(ratio*len(self.paths_dict)))
-        #print(f"Removing edges from 0 to nodes: {to_remove}")
-        self.G.remove_edges_from([(0, node) for node in to_remove])
-        while nx.density(self.G) > 0.3:
-            u, v = random.choice(list(self.G.edges()))
-            if u != 0 and v != 0:
-                self.G.remove_edge(u, v)
 
     def tournament_selection(self, costs, tao = 3):
         indeces = random.sample(range(self.population_size), tao)
