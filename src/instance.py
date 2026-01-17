@@ -55,21 +55,50 @@ class Solution:
                 nodes_to_grab = [i for i in path[1:] if self.solution[i-1] == dest]
                 # node with lowest index in path
                 nearest_to_grab = min(nodes_to_grab, key=lambda x: path.index(x))
-                print("nodes to grab:", nodes_to_grab, "nearest to grab:", nearest_to_grab)
+                #print("nodes to grab:", nodes_to_grab, "nearest to grab:", nearest_to_grab)
                 # print("nodes to grab:", nodes_to_grab)
                 for node in orig_path[1:-1]:
                     # print("  node:", node, "grab:", 0.0)
                     formatted_solution.append((node, 0.0))
-                if len(nodes_to_grab) > 1:
-                    return_path = self.orig_paths_dict[nearest_to_grab] + path[path.index(nearest_to_grab)+1:]
-                else:
+                if len(nodes_to_grab) == 1 and nodes_to_grab[0] == path[-1]:
                     return_path = orig_path
+
+                else:
+                    #print("dest", dest, "Nodes to grab:", nodes_to_grab,"path", path, "nearest to grab:", nearest_to_grab)
+                    return_path = self.orig_paths_dict[nearest_to_grab] + path[path.index(nearest_to_grab)+1:]
+                    #print("Return path:", return_path)
+                
                 for node in return_path[len(return_path)-1::-1]:
                     gold = self.gold_dict[node] if node in nodes_to_grab else 0.0
                     # print("  node:", node, "grab:", gold)
                     formatted_solution.append((node, gold))
         return formatted_solution
     
+
+    """
+    def format_solution(self):
+        formatted_solution = []
+        for dest, path in self.paths_dict.items():
+            if dest == 0:
+                continue
+            orig_path = self.orig_paths_dict[dest]
+            if dest in self.solution:
+                nodes_to_grab = [i for i in path[1:] if self.solution[i-1] == dest]
+                print("nodes to grab while reaching [", dest, "]", nodes_to_grab)
+                for node in orig_path[1:-1]:
+                    #print("node:", node, "grab:", 0.0)
+                    formatted_solution.append((node, 0.0))
+                if len(nodes_to_grab) == 1 and nodes_to_grab[0] == path[-1]:
+                    return_path = orig_path
+                else:
+                    return_path = path
+                for node in return_path[len(return_path)-1::-1]:
+                    gold = self.gold_dict[node] if node in nodes_to_grab else 0.0
+                    #print("  node:", node, "grab:", gold)
+                    formatted_solution.append((node, gold))
+        return formatted_solution
+    """
+
     def mutate_split(self):
         solution_copy = np.array(self.solution.copy())
         values, cnt = np.unique(solution_copy, return_counts=True)
@@ -128,15 +157,12 @@ class Solution:
                 continue
             for i in range(1, len(orig_path)):
                 total_cost += W[orig_path[i-1]][orig_path[i]]
-            # total_cost += nx.path_weight(self.P.graph, self.orig_paths_dict[dest], weight='dist')
-            # for i in range(1, len(path)):
-            #     total_cost += self.G[path[i-1]][path[i]]['dist']
             nodes_to_grab = [i for i in path[1:] if self.solution[i-1] == dest]
             current_gold = 0.0
-            if len(nodes_to_grab) > 1:
-                return_path = path
+            if len(nodes_to_grab) == 1 and nodes_to_grab[0] == path[-1]:
+                    return_path = orig_path
             else:
-                return_path = orig_path
+                return_path = path
             for i in range(len(return_path)-1, 0, -1):
                 if return_path[i] in nodes_to_grab:
                     current_gold += self.gold_dict[return_path[i]]
@@ -146,8 +172,8 @@ class Solution:
                
         self.fitness_value = total_cost
         return total_cost
-
     """
+    
     def fitness(self):
         if self.fitness_value is not None:
             return self.fitness_value
@@ -163,12 +189,15 @@ class Solution:
             nodes_to_grab = [i for i in path[1:] if self.solution[i-1] == dest]
             nearest_to_grab = min(nodes_to_grab, key=lambda x: path.index(x))
             current_gold = 0.0
-            if len(nodes_to_grab) > 1:
+            
+            if len(nodes_to_grab) == 1 and nodes_to_grab[0] == dest:
+                return_path = orig_path
+
+            else:
                 #print("dest", dest, "Nodes to grab:", nodes_to_grab,"path", path, "nearest to grab:", nearest_to_grab)
                 return_path = self.orig_paths_dict[nearest_to_grab] + path[path.index(nearest_to_grab)+1:]
                 #print("Return path:", return_path)
-            else:
-                return_path = orig_path
+
             for i in range(len(return_path)-1, 0, -1):
                 if return_path[i] in nodes_to_grab:
                     current_gold += self.gold_dict[return_path[i]]
@@ -178,6 +207,7 @@ class Solution:
                
         self.fitness_value = total_cost
         return total_cost
+    
     
     def __str__(self):
         return str(self.solution)
