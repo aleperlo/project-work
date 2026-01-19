@@ -89,7 +89,7 @@ class GeneticAlgorithm:
         self.best_sol : Solution = None
         self.mutation_rate = mutation_rate
         self.mutation_choice = mutation_choice
-        self.elitism = self.population_size // 10
+        self.elitism = population_size // 20
         self.history = []
         self.evaluations = []
 
@@ -122,11 +122,11 @@ class GeneticAlgorithm:
                 p1 = self.tournament_selection(costs)                
 
                 if random.random() < self.mutation_rate:
+                    
                     if random.random() < self.mutation_choice:
-                        offspring = p1.mutate_split()
-                        
+                        offspring = p1.mutate_split()                    
                     else:
-                        offspring = p1.mutate_join()
+                        offspring = p1.mutate_join() 
                        
                 else:
                     p2 = self.tournament_selection(costs)
@@ -140,6 +140,7 @@ class GeneticAlgorithm:
             self.population = next_gen
             
         return self.best_sol, self.best_cost
+   
 
     def plot_history(self):
         cumulative_avg = np.cumsum([cost for _, cost in self.history]) / np.arange(1, len(self.history)+1)
@@ -164,8 +165,10 @@ class GeneticAlgorithm:
             "problem_alpha": self.problem.alpha,
             "problem_beta": self.problem.beta,
             "problem_density": nx.density(self.problem.graph),
-            "baseline_cost": baseline_cost
+            "baseline_cost": baseline_cost,
+            "best_cost": self.best_cost,
         }
+        np.save(f"{log_dir}/best_sol.npy", self.best_sol.solution)
         with open(f"{log_dir}/ga_params.json", "w") as f:
             json.dump(params, f, indent=4)
         df_history = pd.DataFrame(self.history, columns=["generation", "best_cost"])

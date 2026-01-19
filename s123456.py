@@ -7,14 +7,14 @@ import random
 def solution(p:Problem):
     num_cities = p.graph.number_of_nodes()
     G = p.graph
-    population_size = 50 if num_cities == 100 else 20
-    max_generations = 50 if num_cities == 100 else 20
+    population_size = 100 if num_cities == 100 else 50
+    max_generations = 50 if num_cities == 100 else 25
     density = nx.density(G)
-    pd_param = 0.3 if density < 0.5 else 0.5
-    GA = GeneticAlgorithm(p, population_size=population_size, max_generations=max_generations, mutation_rate=0, mutation_choice=0.5, pd_param=pd_param)
+    pd_param = 0.8 if density < 0.5 else 0.5
+    GA = GeneticAlgorithm(p, population_size=population_size, max_generations=max_generations, mutation_rate=0.5, mutation_choice=0.5, pd_param=pd_param)
     best_solution, best_cost = GA.solve()
     path = best_solution.format_solution()
-    print(best_solution)
+    print(best_solution, best_cost)
     return path, best_solution
 
 def check_solution(sol: list[tuple[int, float]], p):
@@ -34,7 +34,7 @@ def check_solution(sol: list[tuple[int, float]], p):
     print("Solution values correct:", ok)
     return f"ok" if gold_collected == all_cities else f"Not all cities collected from. Collected from {gold_collected}, expected {all_cities}"
 
-p = Problem(num_cities=10, alpha=1, beta=1, density=0.2, seed=random.randint(0, 10000))
+p = Problem(num_cities=20, alpha=1, beta=5, density=1, seed=42)
 sol, best_solution = solution(p)
-print(sol)
+print(p.baseline())
 print("Solution valid:", check_solution(sol, p))

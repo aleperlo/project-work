@@ -38,10 +38,10 @@ class Solution:
         return solution
     
     def mutation_random_solution(self):
-        solution = np.arange(1, len(self.paths_dict))
+        solution = np.arange(1, len(self.paths_dict))      
         solution_obj = Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, orig_paths_dict=self.orig_paths_dict, solution=solution)
-        for _ in range(2):
-            solution_obj = solution_obj.mutate_join()
+        for _ in range(self.P.graph.number_of_nodes() // 10):
+            solution_obj = solution_obj.mutate_join()            
         return solution_obj.solution
 
     def format_solution(self):
@@ -114,20 +114,33 @@ class Solution:
                     dest = node
                     break
             solution_copy[to_change] = dest
-        return Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, orig_paths_dict=self.orig_paths_dict, solution=solution_copy)
+        sol = Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, orig_paths_dict=self.orig_paths_dict, solution=solution_copy)
+        #if sol.fitness() < self.fitness():
+            #print("Better sol using split mutation:", sol.fitness())
+        return sol
 
     def mutate_join(self):
         solution_copy = np.array(self.solution.copy())
         values, cnt = np.unique(solution_copy, return_counts=True)
+        #dist_dict = {i:(np.sqrt((x-1/2)**2 + (y-1/2)**2)) for i, (x,y) in self.G.nodes(data='pos') if i in values}
+        #weights = np.array([1/dist_dict[i] for i in values])
         prob = 1/cnt / (1/cnt).sum()
+        #prob = weights / weights.sum()
         val = np.random.choice(values, p= prob)
-        idx = np.where(values == val)[0][0]
         # from solution_copy, choose an index i whose value in the array != val but such that path_dict[i] contains val
         candidates = [u for i, u in enumerate(solution_copy) if u != val and val in self.paths_dict[u]]
         if len(candidates) > 0:
+            # choose u as closest to origin among candidates
+            #dist_dict = {i:(np.sqrt((x-1/2)**2 + (y-1/2)**2)) for i, (x,y) in self.G.nodes(data='pos') if i in candidates}
+            #weights = np.array([1/dist_dict[i] for i in candidates])
+            #p = weights / weights.sum()
+            #u = np.random.choice(candidates, p=p)
             u = np.random.choice(candidates)
             solution_copy[solution_copy == val] = u
-        return Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, orig_paths_dict=self.orig_paths_dict, solution=solution_copy)
+        sol = Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, orig_paths_dict=self.orig_paths_dict, solution=solution_copy)
+        #if sol.fitness() < self.fitness():
+            #print("Better sol using join mutation:", sol.fitness())
+        return sol
     
     def crossover(self, p2):
         offspring = np.zeros(len(self.solution), dtype=int)
@@ -142,9 +155,10 @@ class Solution:
                 val = np.random.choice(list(v2))
                 v2.remove(val)
                 offspring[(p2.solution == val) & (offspring==0)] = val
- 
-        return Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, orig_paths_dict=self.orig_paths_dict, solution=offspring)
-
+        sol =  Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, orig_paths_dict=self.orig_paths_dict, solution=offspring)
+        #if sol.fitness() < self.fitness() and sol.fitness() < p2.fitness():
+        #    print("Better sol using crossover:", sol.fitness()) 
+        return sol
     """
     def fitness(self):
         if self.fitness_value is not None:

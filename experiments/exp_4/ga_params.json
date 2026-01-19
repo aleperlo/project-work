@@ -1,5 +1,5 @@
 {
-    "population_size": 50,
+    "population_size": 100,
     "max_generations": 50,
     "mutation_rate": 0.5,
     "mutation_choice": 0.5,
@@ -7,5 +7,6 @@
     "problem_alpha": 2,
     "problem_beta": 1,
     "problem_density": 0.22121212121212122,
-    "baseline_cost": 50425.30961817918
+    "baseline_cost": 50425.30961817918,
+    "best_cost": 50394.107497069795
 }
