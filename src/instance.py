@@ -35,6 +35,10 @@ class Solution:
         for i in range(1, len(self.paths_dict)):
             c = np.random.choice(self.admissible_values[i])
             solution.append(c.item())
+        values = set(solution)
+        for v in values:
+            if v != solution[v-1]:
+                solution[v-1] = v
         return solution
     
     def mutation_random_solution(self):
