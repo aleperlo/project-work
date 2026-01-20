@@ -78,31 +78,6 @@ class Solution:
                     formatted_solution.append((node, gold))
         return formatted_solution
     
-
-    """
-    def format_solution(self):
-        formatted_solution = []
-        for dest, path in self.paths_dict.items():
-            if dest == 0:
-                continue
-            orig_path = self.orig_paths_dict[dest]
-            if dest in self.solution:
-                nodes_to_grab = [i for i in path[1:] if self.solution[i-1] == dest]
-                print("nodes to grab while reaching [", dest, "]", nodes_to_grab)
-                for node in orig_path[1:-1]:
-                    #print("node:", node, "grab:", 0.0)
-                    formatted_solution.append((node, 0.0))
-                if len(nodes_to_grab) == 1 and nodes_to_grab[0] == path[-1]:
-                    return_path = orig_path
-                else:
-                    return_path = path
-                for node in return_path[len(return_path)-1::-1]:
-                    gold = self.gold_dict[node] if node in nodes_to_grab else 0.0
-                    #print("  node:", node, "grab:", gold)
-                    formatted_solution.append((node, gold))
-        return formatted_solution
-    """
-
     def mutate_split(self):
         solution_copy = np.array(self.solution.copy())
         values, cnt = np.unique(solution_copy, return_counts=True)
@@ -126,19 +101,13 @@ class Solution:
     def mutate_join(self):
         solution_copy = np.array(self.solution.copy())
         values, cnt = np.unique(solution_copy, return_counts=True)
-        #dist_dict = {i:(np.sqrt((x-1/2)**2 + (y-1/2)**2)) for i, (x,y) in self.G.nodes(data='pos') if i in values}
-        #weights = np.array([1/dist_dict[i] for i in values])
         prob = 1/cnt / (1/cnt).sum()
-        #prob = weights / weights.sum()
         val = np.random.choice(values, p= prob)
-        # from solution_copy, choose an index i whose value in the array != val but such that path_dict[i] contains val
-        candidates = [u for i, u in enumerate(solution_copy) if u != val and val in self.paths_dict[u]]
+        candidates = [u for _, u in enumerate(solution_copy) if u != val and val in self.paths_dict[u]]
+        while len(candidates) <= 0:
+            val = np.random.choice(values)
+            candidates = [u for _, u in enumerate(solution_copy) if u != val and val in self.paths_dict[u]]
         if len(candidates) > 0:
-            # choose u as closest to origin among candidates
-            #dist_dict = {i:(np.sqrt((x-1/2)**2 + (y-1/2)**2)) for i, (x,y) in self.G.nodes(data='pos') if i in candidates}
-            #weights = np.array([1/dist_dict[i] for i in candidates])
-            #p = weights / weights.sum()
-            #u = np.random.choice(candidates, p=p)
             u = np.random.choice(candidates)
             solution_copy[solution_copy == val] = u
         sol = Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, orig_paths_dict=self.orig_paths_dict, solution=solution_copy)
@@ -212,35 +181,7 @@ class Solution:
 
         sol = Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, orig_paths_dict=self.orig_paths_dict, solution=offspring)
         return sol
-    """
-    def fitness(self):
-        if self.fitness_value is not None:
-            return self.fitness_value
-        total_cost = 0.0
-        W = nx.to_numpy_array(self.P.graph, nodelist=range(self.G.number_of_nodes()), weight='dist')
-        for dest, path in self.paths_dict.items():
-            orig_path = self.orig_paths_dict[dest]
-            if dest == 0 or dest not in self.solution:
-                continue
-            for i in range(1, len(orig_path)):
-                total_cost += W[orig_path[i-1]][orig_path[i]]
-            nodes_to_grab = [i for i in path[1:] if self.solution[i-1] == dest]
-            current_gold = 0.0
-            if len(nodes_to_grab) == 1 and nodes_to_grab[0] == path[-1]:
-                    return_path = orig_path
-            else:
-                return_path = path
-            for i in range(len(return_path)-1, 0, -1):
-                if return_path[i] in nodes_to_grab:
-                    current_gold += self.gold_dict[return_path[i]]
-                dist = W[return_path[i-1]][return_path[i]]
-                #print(f"Going from {return_path[i]} to {return_path[i-1]} with distance {dist} and current gold {current_gold}")
-                total_cost += dist + (self.P.alpha * dist * current_gold) ** self.P.beta
-               
-        self.fitness_value = total_cost
-        return total_cost
-    """
-    
+   
     def fitness(self):
         if self.fitness_value is not None:
             return self.fitness_value

@@ -12,7 +12,7 @@ def solution(p:Problem):
     max_generations = 50 if num_cities == 100 else 25
     density = nx.density(G)
     pd_param = 0.8 if density < 0.5 else 0.5
-    GA = GeneticAlgorithm(p, population_size=population_size, max_generations=max_generations, mutation_rate=1, mutation_choice=0.5, pd_param=pd_param)
+    GA = GeneticAlgorithm(p, population_size=population_size, max_generations=max_generations, mutation_rate=0.5, mutation_choice=0.5, pd_param=pd_param)
     best_solution, best_cost = GA.solve()
     path = best_solution.format_solution()
     print(best_cost)
@@ -46,7 +46,7 @@ def check_solution(sol: list[tuple[int, float]], p):
             else:
                 collected_counts[city] = 1
 
-p = Problem(num_cities=100, alpha=1, beta=2, density=1, seed=np.random.randint(0, 10000))
+p = Problem(num_cities=100, alpha=1, beta=2, density=1, seed=42)
 sol, best_solution = solution(p)
 print(p.baseline())
 check_solution(sol,p)
