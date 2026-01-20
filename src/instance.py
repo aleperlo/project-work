@@ -148,20 +148,69 @@ class Solution:
     
     def crossover(self, p2):
         offspring = np.zeros(len(self.solution), dtype=int)
-        v1 = set(np.unique(self.solution, return_counts=False))
-        v2 = set(np.unique(p2.solution, return_counts=False))
-        while np.any(offspring == 0): 
-            if len(v1) != 0:          
+        
+        # Get unique destinations (hubs) from both parents
+        v1 = set(np.unique(self.solution))
+        v2 = set(np.unique(p2.solution))
+        
+        while np.any(offspring == 0):
+            # Safety Valve: If both sets are empty but offspring has 0s (due to conflicts),
+            # fill remaining 0s as self-loops to prevent infinite loop.
+            if not v1 and not v2:
+                # Get indices of all unassigned (orphaned) nodes
+                zeros_idx = np.where(offspring == 0)[0]
+                
+                for idx in zeros_idx:
+                    # Candidate destinations from parents
+                    p1_dest = self.solution[idx]
+                    p2_dest = p2.solution[idx]
+                    
+                    # Check 1: Is Parent 1's destination for this node an active hub in offspring?
+                    # Note: p1_dest is 1-based, so array index is p1_dest - 1
+                    if offspring[p1_dest - 1] == p1_dest:
+                        offspring[idx] = p1_dest
+                        
+                    # Check 2: Is Parent 2's destination for this node an active hub in offspring?
+                    elif offspring[p2_dest - 1] == p2_dest:
+                        offspring[idx] = p2_dest
+                        
+                    # Fallback: If neither parent points to a surviving hub, 
+                    # ONLY THEN force a self-loop (make this node its own hub)
+                    else:
+                        offspring[idx] = idx + 1 # 1-based index
+                
+                # We have handled all zeros, so we can break the main loop
+                break
+
+            # --- Try Parent 1 ---
+            if v1:
                 val = np.random.choice(list(v1))
-                v1.remove(val)            
-                offspring[(self.solution == val) & (offspring==0)] = val
-            if len(v2) != 0:   
+                v1.remove(val)
+                hub_idx = val - 1  # Convert 1-based value to 0-based index
+                
+                # CONSISTENCY CHECK: 
+                # Can 'val' be a hub? Only if its own slot is 0 or already 'val'.
+                if offspring[hub_idx] == 0 or offspring[hub_idx] == val:
+                    # Assign 'val' to all empty spots where Parent 1 had 'val'
+                    mask = (self.solution == val) & (offspring == 0)
+                    offspring[mask] = val
+                    
+                    # FORCE HUB: Ensure the destination itself points to itself
+                    offspring[hub_idx] = val
+
+            # --- Try Parent 2 ---
+            if v2:
                 val = np.random.choice(list(v2))
                 v2.remove(val)
-                offspring[(p2.solution == val) & (offspring==0)] = val
-        sol =  Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, orig_paths_dict=self.orig_paths_dict, solution=offspring)
-        #if sol.fitness() < self.fitness() and sol.fitness() < p2.fitness():
-        #    print("Better sol using crossover:", sol.fitness()) 
+                hub_idx = val - 1
+                
+                # CONSISTENCY CHECK
+                if offspring[hub_idx] == 0 or offspring[hub_idx] == val:
+                    mask = (p2.solution == val) & (offspring == 0)
+                    offspring[mask] = val
+                    offspring[hub_idx] = val
+
+        sol = Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, orig_paths_dict=self.orig_paths_dict, solution=offspring)
         return sol
     """
     def fitness(self):
