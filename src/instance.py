@@ -104,9 +104,12 @@ class Solution:
         prob = 1/cnt / (1/cnt).sum()
         val = np.random.choice(values, p= prob)
         candidates = [u for _, u in enumerate(solution_copy) if u != val and val in self.paths_dict[u]]
-        while len(candidates) <= 0:
+        max_tries = 100
+        tries = 0
+        while len(candidates) <= 0 and tries < max_tries:
             val = np.random.choice(values)
             candidates = [u for _, u in enumerate(solution_copy) if u != val and val in self.paths_dict[u]]
+            tries += 1
         if len(candidates) > 0:
             u = np.random.choice(candidates)
             solution_copy[solution_copy == val] = u
@@ -123,32 +126,12 @@ class Solution:
         v2 = set(np.unique(p2.solution))
         
         while np.any(offspring == 0):
-            # Safety Valve: If both sets are empty but offspring has 0s (due to conflicts),
-            # fill remaining 0s as self-loops to prevent infinite loop.
             if not v1 and not v2:
                 # Get indices of all unassigned (orphaned) nodes
                 zeros_idx = np.where(offspring == 0)[0]
-                
                 for idx in zeros_idx:
-                    # Candidate destinations from parents
-                    p1_dest = self.solution[idx]
-                    p2_dest = p2.solution[idx]
-                    
-                    # Check 1: Is Parent 1's destination for this node an active hub in offspring?
-                    # Note: p1_dest is 1-based, so array index is p1_dest - 1
-                    if offspring[p1_dest - 1] == p1_dest:
-                        offspring[idx] = p1_dest
-                        
-                    # Check 2: Is Parent 2's destination for this node an active hub in offspring?
-                    elif offspring[p2_dest - 1] == p2_dest:
-                        offspring[idx] = p2_dest
-                        
-                    # Fallback: If neither parent points to a surviving hub, 
-                    # ONLY THEN force a self-loop (make this node its own hub)
-                    else:
-                        offspring[idx] = idx + 1 # 1-based index
-                
-                # We have handled all zeros, so we can break the main loop
+                    # Create a self-loop for orphaned nodes
+                    offspring[idx] = idx + 1
                 break
 
             # --- Try Parent 1 ---
