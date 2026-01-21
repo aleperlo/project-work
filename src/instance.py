@@ -3,7 +3,37 @@ import numpy as np
 from collections import defaultdict
 
 class Solution:
+    """
+    Class representing a solution for the problem instance.
+    Attributes:
+        P: Problem instance
+        G: Simplified graph associated with the problem
+        paths_dict: Dictionary of shortest paths from source to all nodes
+        gold_dict: Dictionary of gold values for each node
+        orig_paths_dict: Original paths dictionary from the problem graph
+        admissible_values: Dictionary mapping each node to its admissible destination hubs
+        admissible_mutations: Dictionary of nodes that can be mutated
+        solution: Current solution representation as a list
+        fitness_value: Cached fitness value of the solution
+    Methods:
+        random_solution: Generates a random valid solution
+        format_solution: Formats the solution for output
+        mutate_split: Mutation operation that splits a hub
+        mutate_join: Mutation operation that joins hubs
+        crossover: Crossover operation between two solutions
+        fitness: Computes the fitness value of the solution
+    """
     def __init__(self, P, G=None, paths_dict=None, gold_dict=None, orig_paths_dict=None, solution=None):
+        """
+        Initializes the Solution object.
+        Args:
+            P: Problem instance
+            G: Simplified graph (optional)
+            paths_dict: Precomputed paths dictionary (optional)
+            gold_dict: Precomputed gold dictionary (optional)
+            orig_paths_dict: Precomputed original paths dictionary (optional)
+            solution: Initial solution (optional)
+        """
         self.P = P
         if G is not None:
             self.G = G.copy()
@@ -18,7 +48,7 @@ class Solution:
             self.orig_paths_dict = orig_paths_dict
         else:
             raise ValueError("Either G or both paths_dict and gold_dict must be provided.")
-        # Compute admissible values
+        # Compute admissible values for each entry in the solution
         self.admissible_values = defaultdict(list)
         for dest, path in self.paths_dict.items():
             for node in path:
@@ -31,59 +61,70 @@ class Solution:
         self.fitness_value = None
 
     def random_solution(self):
+        """
+        Generates a random valid solution.
+        Returns:
+            A list representing the random solution.
+        """
         solution = []
         for i in range(1, len(self.paths_dict)):
+            # Choose a random admissible value for node i
             c = np.random.choice(self.admissible_values[i])
             solution.append(c.item())
         values = set(solution)
+        # Repair strategy: ensure each hub points to itself
         for v in values:
             if v != solution[v-1]:
                 solution[v-1] = v
         return solution
-    
-    def mutation_random_solution(self):
-        solution = np.arange(1, len(self.paths_dict))      
-        solution_obj = Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, orig_paths_dict=self.orig_paths_dict, solution=solution)
-        for _ in range(self.P.graph.number_of_nodes() // 10):
-            solution_obj = solution_obj.mutate_join()            
-        return solution_obj.solution
 
     def format_solution(self):
+        """
+        Formats the solution for output.
+        Returns:
+            A list of tuples representing the formatted solution.
+        """
         formatted_solution = []
         for dest, path in self.paths_dict.items():
             if dest == 0:
                 continue
+            # Get the shortest path to the destination in the original graph
             orig_path = self.orig_paths_dict[dest]
+            # Only process if the destination is an hub node
             if dest in self.solution:
-                # print("dest:", dest, "path:", path, end=' ')
+                # Identify nodes to grab gold from when going to node 'dest'
                 nodes_to_grab = [i for i in path[1:] if self.solution[i-1] == dest]
-                # node with lowest index in path
+                # Find the nearest node to grab gold from
                 nearest_to_grab = min(nodes_to_grab, key=lambda x: path.index(x))
-                #print("nodes to grab:", nodes_to_grab, "nearest to grab:", nearest_to_grab)
-                # print("nodes to grab:", nodes_to_grab)
+                # Add the path to the destination, no gold collected on the way
                 for node in orig_path[1:-1]:
-                    # print("  node:", node, "grab:", 0.0)
                     formatted_solution.append((node, 0.0))
+                # If only the destination node is to be grabbed, return using the original path
                 if len(nodes_to_grab) == 1 and nodes_to_grab[0] == path[-1]:
                     return_path = orig_path
-
+                # Otherwise, return using the path from nearest_to_grab + remaining path to dest on the simplified graph
                 else:
-                    #print("dest", dest, "Nodes to grab:", nodes_to_grab,"path", path, "nearest to grab:", nearest_to_grab)
                     return_path = self.orig_paths_dict[nearest_to_grab] + path[path.index(nearest_to_grab)+1:]
-                    #print("Return path:", return_path)
-                
+                # Add the return path, collecting gold as specified
                 for node in return_path[len(return_path)-1::-1]:
                     gold = self.gold_dict[node] if node in nodes_to_grab else 0.0
-                    # print("  node:", node, "grab:", gold)
                     formatted_solution.append((node, gold))
         return formatted_solution
     
     def mutate_split(self):
+        """
+        Performs a split mutation on the solution.
+        Returns:
+            A new Solution object after mutation.
+        """
         solution_copy = np.array(self.solution.copy())
+        # Select a value to split based on frequency
         values, cnt = np.unique(solution_copy, return_counts=True)
         val = np.random.choice(values, p= cnt/cnt.sum())
         idx = np.where(values == val)[0][0]
+        # Perform split if count > 1
         if cnt[idx] > 1:
+            # Split approximately half of the nodes to a new destination
             i = cnt[idx]//2
             to_change = []
             for node in self.paths_dict[val][1:]:
@@ -94,31 +135,43 @@ class Solution:
                     break
             solution_copy[to_change] = dest
         sol = Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, orig_paths_dict=self.orig_paths_dict, solution=solution_copy)
-        #if sol.fitness() < self.fitness():
-            #print("Better sol using split mutation:", sol.fitness())
         return sol
 
     def mutate_join(self):
+        """
+        Performs a join mutation on the solution.
+        Returns:
+            A new Solution object after mutation.
+        """
+        # Select a value to join based on inverse frequency
         solution_copy = np.array(self.solution.copy())
         values, cnt = np.unique(solution_copy, return_counts=True)
         prob = 1/cnt / (1/cnt).sum()
         val = np.random.choice(values, p= prob)
+        # Find candidates to join with
         candidates = [u for _, u in enumerate(solution_copy) if u != val and val in self.paths_dict[u]]
         max_tries = 100
         tries = 0
+        # Retry if no candidates found
         while len(candidates) <= 0 and tries < max_tries:
             val = np.random.choice(values)
             candidates = [u for _, u in enumerate(solution_copy) if u != val and val in self.paths_dict[u]]
             tries += 1
+        # Perform join if candidates found
         if len(candidates) > 0:
             u = np.random.choice(candidates)
             solution_copy[solution_copy == val] = u
         sol = Solution(P=self.P, paths_dict=self.paths_dict, gold_dict=self.gold_dict, orig_paths_dict=self.orig_paths_dict, solution=solution_copy)
-        #if sol.fitness() < self.fitness():
-            #print("Better sol using join mutation:", sol.fitness())
         return sol
     
     def crossover(self, p2):
+        """
+        Performs crossover between this solution and another solution.
+        Args:
+            p2: Another Solution object to crossover with.
+        Returns:
+            A new Solution object after crossover.
+        """
         offspring = np.zeros(len(self.solution), dtype=int)
         
         # Get unique destinations (hubs) from both parents
@@ -166,6 +219,11 @@ class Solution:
         return sol
    
     def fitness(self):
+        """
+        Computes the fitness value of the solution.
+        Returns:
+            The fitness value as a float.
+        """
         if self.fitness_value is not None:
             return self.fitness_value
         total_cost = 0.0
@@ -185,15 +243,12 @@ class Solution:
                 return_path = orig_path
 
             else:
-                #print("dest", dest, "Nodes to grab:", nodes_to_grab,"path", path, "nearest to grab:", nearest_to_grab)
                 return_path = self.orig_paths_dict[nearest_to_grab] + path[path.index(nearest_to_grab)+1:]
-                #print("Return path:", return_path)
 
             for i in range(len(return_path)-1, 0, -1):
                 if return_path[i] in nodes_to_grab:
                     current_gold += self.gold_dict[return_path[i]]
                 dist = W[return_path[i-1]][return_path[i]]
-                #print(f"Going from {return_path[i]} to {return_path[i-1]} with distance {dist} and current gold {current_gold}")
                 total_cost += dist + (self.P.alpha * dist * current_gold) ** self.P.beta
                
         self.fitness_value = total_cost
@@ -201,4 +256,5 @@ class Solution:
     
     
     def __str__(self):
+        """String representation of the solution."""
         return str(self.solution)
