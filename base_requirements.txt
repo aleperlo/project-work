@@ -2,3 +2,5 @@ icecream
 numpy
 matplotlib
 networkx
+pandas
+tqdm
