@@ -1,11 +1,12 @@
 from Problem import Problem
 from src.genetic_algorithm import GeneticAlgorithm
 import networkx as nx
-import matplotlib.pyplot as plt
 import random
 import numpy as np
 
 def solution(p:Problem):
+    random.seed(42)
+    np.random.seed(42)
     num_cities = p.graph.number_of_nodes()
     G = p.graph
     population_size = 100 if num_cities <= 500 else 50
