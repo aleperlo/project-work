@@ -1,3 +1,8 @@
+# Thief problem on a tree obtained simplifying the original graph
+
+The algorithm implements a solver for the problem based on search on a tree obtained simplifying the original graph.
+The solution has been developed jointly by Chiara Maretto `s339401` and Alessandro Perlo `s337131`.
+
 # project-work
 
 ### Repository Setup
